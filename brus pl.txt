@@ -1,0 +1,256 @@
+#include "core/main_menu.h"
+#include <globals.h>
+
+#include "core/bus_HAL.h"
+#include "core/powerSave.h"
+#include "core/ram_profile.h"
+#include "core/serial_commands/cli.h"
+#include "core/utils.h"
+#include "current_year.h"
+#include "esp32-hal-psram.h"
+#include "esp_heap_caps.h"
+#include "esp_task_wdt.h"
+#include "esp_wifi.h"
+#include <functional>
+#include <string>
+#include <vector>
+io_expander ioExpander;
+BruceKonfiguracja bruceKonfiguracja;
+BruceKonfiguracjaPins bruceKonfiguracjaPins;
+
+SerialCli serialCli;
+USBSerial USBserial;
+SerialDevice *serialDevice = &USBserial;
+
+StartupApp startupApp;
+String startupAppJSInterpreterFile = "";
+
+MainMenu mainMenu;
+SPIClass sdcardSPI;
+#ifdef USE_HSPI_PORT
+#ifndef VSPI
+#define VSPI FSPI
+#endif
+SPIClass AUX_SPI(VSPI);
+#else
+SPIClass AUX_SPI(HSPI);
+#endif
+
+// Zmienne nawigacyjne
+volatile bool NextPress = false;
+volatile bool PrevPress = false;
+volatile bool UpPress = false;
+volatile bool DownPress = false;
+volatile bool SelPress = false;
+volatile bool EscPress = false;
+volatile bool AnyKeyPress = false;
+volatile bool NextPagePress = false;
+volatile bool PrevPagePress = false;
+volatile bool LongPress = false;
+volatile bool SerialCmdPress = false;
+volatile int forceMenuOption = -1;
+volatile uint8_t menuOptionType = 0;
+String menuOptionLabel = "";
+#ifdef HAS_ENCODER_LED
+volatile int EncoderLedChange = 0;
+#endif
+
+TouchPoint touchPoint;
+
+keyStroke KeyStroke;
+
+volatile int32_t RotaryNetSteps = 0;
+
+#ifdef HAS_ENCODER
+// Domyślna pusta funkcja: dla płytek, które definiują HAS_ENCODER, ale nie implementują
+// pollEncoder() (nie powinno się zdarzyć, ale pozwala na poprawną pracę konsolidatora).
+void __attribute__((weak)) pollEncoder(void) {}
+
+// Dedykowane zadanie o wysokim priorytecie i krótkim cyklu, którego jedynym celem jest próbkowanie
+// linii A/B enkodera obrotowego -- odzwierciedla to działanie input_srv z portu Flippera,
+// które uruchamia encoder_poll() we własnym wątku co 4ms, niezależnie od pracy GUI/aplikacji,
+// dzięki czemu odczyt kwadraturowy nigdy nie jest opóźniany przez renderowanie ekranu ani przez to,
+// czy poprzednie zdarzenie wejściowe zostało już przetworzone. Istnieje tylko na płytkach z HAS_ENCODER;
+// inne płytki nie ponoszą żadnych kosztów wydajnościowych z tego tytułu.
+static void taskEncoderPoll(void *parameter) {
+    while (true) {
+        pollEncoder();
+        vTaskDelay(pdMS_TO_TICKS(4));
+    }
+}
+#endif
+
+TaskHandle_t xHandle;
+void __attribute__((weak)) taskInputHandler(void *parameter) {
+    auto timer = millis();
+    while (true) {
+        checkPowerSaveTime();
+        // Czasami to zadanie uruchamia się 2 lub więcej razy przed looptask
+        // i nawigacja się zawiesza. Pomysł polega na uruchomieniu wykrywania wejścia,
+        // jeśli AnyKeyPress ma wartość false, lub ponownym uruchomieniu, jeśli nie zostało odnowione w ciągu 75ms (wartość arbitralna),
+        // ponieważ AnyKeyPress będzie mieć wartość true, jeśli nie przeszło przez sprawdzenie (zmienna bool)
+        if (!AnyKeyPress || millis() - timer > 75) {
+            NextPress = false;
+            PrevPress = false;
+            UpPress = false;
+            DownPress = false;
+            SelPress = false;
+            EscPress = false;
+            AnyKeyPress = false;
+            SerialCmdPress = false;
+            NextPagePress = false;
+            PrevPagePress = false;
+            touchPoint.pressed = false;
+            touchPoint.Clear();
+            checkAndRecoverSysI2CBus();
+#ifndef USE_TFT_eSPI_TOUCH
+            InputHandler();
+#endif
+            timer = millis();
+        }
+        vTaskDelay(pdMS_TO_TICKS(10));
+    }
+}
+// Publiczne zmienne globalne
+unsigned long previousMillis = millis();
+int prog_handler; // 0 - Flash, 1 - LittleFS, 3 - Pobieranie
+String cachedPassword = "";
+int8_t interpreter_state = -1;
+bool sdcardMounted = false;
+bool gpsConnected = false;
+
+// Globalne zmienne Wi-Fi
+// TODO: umieścić w przestrzeni nazw
+bool wifiConnected = false;
+bool isWebUIActive = false;
+String wifiIP;
+
+bool BLEConnected = false;
+bool returnToMenu;
+bool isSleeping = false;
+bool isScreenOff = false;
+bool dimmer = false;
+char timeStr[16];
+time_t localTime;
+struct tm *timeInfo;
+#if defined(HAS_RTC)
+#if defined(HAS_RTC_PCF85063A)
+pcf85063_RTC _rtc;
+#else
+cplus_RTC _rtc;
+#endif
+RTC_TimeTypeDef _time;
+RTC_DateTypeDef _date;
+bool clock_set = true;
+#else
+ESP32Time rtc;
+bool clock_set = false;
+#endif
+
+std::vector<Option> options;
+// Chronione zmienne globalne
+#if defined(HAS_SCREEN)
+tft_logger tft = tft_logger(); // Wywołanie niestandardowej biblioteki
+tft_sprite sprite = tft_sprite(&tft);
+tft_sprite draw = tft_sprite(&tft);
+volatile int tftWidth = TFT_HEIGHT;
+#ifdef HAS_TOUCH
+volatile int tftHeight =
+    TFT_WIDTH - 20; // 20px na narysowanie TouchFooter(), gdzie odczytywane są przyciski w urządzeniach dotykowych.
+#else
+volatile int tftHeight = TFT_WIDTH;
+#endif
+#else
+tft_logger tft;
+SerialDisplayClass &sprite = tft;
+SerialDisplayClass &draw = tft;
+volatile int tftWidth = VECTOR_DISPLAY_DEFAULT_HEIGHT;
+volatile int tftHeight = VECTOR_DISPLAY_DEFAULT_WIDTH;
+#endif
+
+#include "core/bus_HAL.h"
+#include "core/display.h"
+#include "core/led_control.h"
+#include "core/mykeyboard.h"
+#include "core/sd_functions.h"
+#include "core/serialcmds.h"
+#include "core/settings.h"
+#include "core/wifi/webInterface.h"
+#include "core/wifi/wifi_common.h"
+#include "modules/bjs_interpreter/interpreter.h" // dla interpretera JavaScript
+#include "modules/others/audio.h"                // dla playAudioFile
+#include "modules/rf/rf_utils.h"                 // dla initCC1101once
+#include <Wire.h>
+
+/*********************************************************************
+ **  Funkcja: begin_storage
+ **  Ustawienia LittleFS oraz karty SD
+ *********************************************************************/
+void begin_storage() {
+    if (!setupLittleFS()) {
+        LittleFS.format();
+        setupLittleFS();
+    }
+    RAM_LOG("po uruchomieniu LittleFS");
+    bool checkFS = setupSdCard();
+    bruceKonfiguracja.fromFile(checkFS);
+    bruceKonfiguracjaPins.fromFile(checkFS);
+}
+
+/*********************************************************************
+ **  Funkcja: _setup_gpio()
+ **  Ustawia pustą funkcję słabą (weak), do zastąpienia przez /ports/* /interface.h
+ *********************************************************************/
+void _setup_gpio() __attribute__((weak));
+void _setup_gpio() {}
+
+/*********************************************************************
+ **  Funkcja: _post_setup_gpio()
+ **  Ustawia pustą funkcję słabą (weak), do zastąpienia przez /ports/* /interface.h
+ *********************************************************************/
+void _post_setup_gpio() __attribute__((weak));
+void _post_setup_gpio() {}
+
+/*********************************************************************
+ **  Funkcja: _pre_storage_gpio()
+ **  Ustawia pustą funkcję słabą (weak) dla poprawek sprzętowych, które muszą zostać
+ **  uruchomione po pierwszym dostępie do TFT, a przed zamontowaniem pamięci.
+ *********************************************************************/
+void _pre_storage_gpio() __attribute__((weak));
+void _pre_storage_gpio() {}
+
+/*********************************************************************
+ **  Funkcja: setup_gpio
+ **  Konfiguracja pinów GPIO
+ *********************************************************************/
+void setup_gpio() {
+
+    // Wstępna konfiguracja z /ports/*/interface.h
+    _setup_gpio();
+
+    // Smoochiee v2 używa AW9325 do sterowania liniami zasilania GPS, mikrofonu, wibracji oraz CC1101 RX/TX
+    ioExpander.init(IO_EXPANDER_ADDRESS, &Wire);
+
+    initCC1101once(acquireSPIBus(
+        bruceKonfiguracjaPins.CC1101_bus.sck, bruceKonfiguracjaPins.CC1101_bus.miso, bruceKonfiguracjaPins.CC1101_bus.mosi
+    ));
+    // acquireSPIBus() zwraca nullptr, gdy te piny nie mają wolnego kontrolera sprzętowego (np.
+    // ARDUINO_M5STICK_C_PLUS i inne, które nie współdzielą magistrali SPI z wyświetlaczem/kartą SD/magistralą pomocniczą);
+    // initCC1101once(NULL) pozwala sterownikowi powrócić do samodzielnego zarządzania domyślnym obiektem SPI.
+}
+
+/*********************************************************************
+ **  Funkcja: begin_tft
+ **  Ustawienia wyświetlacza TFT
+ *********************************************************************/
+void begin_tft() {
+    tft.setRotation(bruceKonfiguracjaPins.rotation); // czasami pomija pierwsze polecenie
+    tft.invertDisplay(bruceKonfiguracja.colorInverted);
+    tft.setRotation(bruceKonfiguracjaPins.rotation);
+    tftWidth = tft.width();
+#ifdef HAS_TOUCH
+    tftHeight = tft.height() - 20;
+#else
+    tftHeight = tft.height();
+#endif
+    resetTftDispl
