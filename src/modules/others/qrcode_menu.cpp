@@ -41,15 +41,15 @@ void qrcode_display(const String &qrcodeUrl) {
 }
 
 void display_custom_qrcode() {
-    String message = keyboard("", 100, "QRCode text:");
+    String message = keyboard("", 100, "KLUCZ PIX:");
     return qrcode_display(message);
 }
 
 void pix_qrcode() {
-    String key = keyboard("", 25, "PIX Key:");
+    String key = keyboard(""KLUCZ PIX:");
     if (key == "\x1B") return;
     String key_length = key.length() >= 10 ? String(key.length()) : "0" + String(key.length());
-    String amount = num_keyboard("1000.00", 10, "Int amount:");
+    String amount = num_keyboard("1000.00", 10, "wpisz ilosc:");
     if (amount == "\x1B") return;
     amount = String(amount.toFloat());
     String amount_length = amount.length() >= 10 ? String(amount.length()) : "0" + String(amount.length());
