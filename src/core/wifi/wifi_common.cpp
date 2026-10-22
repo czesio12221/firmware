@@ -62,8 +62,8 @@ bool _wifiConnect(const String &ssid, int encryption) {
         wakeUpScreen();
 
         options = {
-            {"Retry",  [&]() { retry = true; } },
-            {"Cancel", [&]() { retry = false; }},
+            {"PONOW",  [&]() { retry = true; } },
+            {"ANULUJ", [&]() { retry = false; }},
         };
         loopOptions(options);
 
@@ -72,7 +72,7 @@ bool _wifiConnect(const String &ssid, int encryption) {
             return false;
         }
 
-        password = keyboard(password, 63, "Network Password:", true);
+        password = keyboard(password, 63, "CHASLO WIFI:", true);
         if (password == "\x1B") {
             wifiDisconnect();
             return false;
@@ -106,9 +106,9 @@ bool _connectToWifiNetwork(const String &ssid, const String &pwd) {
     }
 
     RAM_LOG("wifi pre-mode"); // Wi-Fi is already up from the menu scan by this point
-    drawMainBorderWithTitle("WiFi Connect");
+    drawMainBorderWithTitle("LOCZENIE WIFI");
     padprintln("");
-    padprint("Connecting to: " + ssid + ".");
+    padprint("LONCZENIE Z: " + ssid + ".");
     WiFi.mode(WIFI_MODE_STA);
     RAM_LOG("wifi post-mode");
     vTaskDelay(10 / portTICK_PERIOD_MS);
@@ -127,7 +127,7 @@ bool _connectToWifiNetwork(const String &ssid, const String &pwd) {
 #endif
 
         if (i > 20) {
-            displayError("Wifi Offline");
+            displayError("Wifi OFF");
             vTaskDelay(500 / portTICK_RATE_MS);
             break;
         }
@@ -180,7 +180,7 @@ bool wifiConnectMenu(wifi_mode_t mode) {
 
     // Check if WiFi is in transition
     if (wifiTransitioning) {
-        displayTextLine("WiFi busy, please wait...");
+        displayTextLine("WiFi ZAJENTE CZEKAJ...");
         vTaskDelay(500 / portTICK_PERIOD_MS);
         return false;
     }
@@ -252,7 +252,7 @@ bool wifiConnectMenu(wifi_mode_t mode) {
                 if (returnToMenu) {
                     refresh_scan = false;
                 } else if (selHidden) {
-                    String __ssid = keyboard("", 32, "Your SSID");
+                    String __ssid = keyboard("" "NAZWA SIECI");
                     if (__ssid != "\x1B") _wifiConnect(__ssid.c_str(), 8);
                     refresh_scan = false;
                 } else if (selSsid != "") {
