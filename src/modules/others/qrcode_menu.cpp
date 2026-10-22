@@ -46,7 +46,7 @@ void display_custom_qrcode() {
 }
 
 void pix_qrcode() {
-    String key = keyboard(""KLUCZ PIX:");
+    String key = keyboard(""KLUCZ PIN:");
     if (key == "\x1B") return;
     String key_length = key.length() >= 10 ? String(key.length()) : "0" + String(key.length());
     String amount = num_keyboard("1000.00", 10, "wpisz ilosc:");
