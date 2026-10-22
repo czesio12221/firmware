@@ -14,23 +14,23 @@
 
 void RFMenu::optionsMenu() {
     options = {
-        {"Scan/copy",       [=]() { RFScan(); }       },
+        {"SKAN/kopia",       [=]() { RFScan(); }       },
 #if !defined(LITE_VERSION)
-        {"Record RAW",      rf_raw_record             }, // Pablo-Ortiz-Lopez
-        {"Custom SubGhz",   sendCustomRF              },
+        {"NAGRAJ RAW",      rf_raw_record             }, // Pablo-Ortiz-Lopez
+        {"Wlasny SubGhz",   sendCustomRF              },
 #endif
-        {"Spectrum",        rf_spectrum               },
+        {"SKANOWANIE",        rf_spectrum               },
 #if !defined(LITE_VERSION)
         {"RSSI Spectrum",   rf_CC1101_rssi            }, // @Pirata
         {"SquareWave Spec", rf_SquareWave             }, // @Pirata
         {"Spectogram",      rf_waterfall              }, // dev_eclipse
 #if defined(BUZZ_PIN) or defined(HAS_NS4168_SPKR) and defined(RF_LISTEN_H)
-        {"Listen",          rf_listen                 }, // dev_eclipse
+        {"SLUCHAC",          rf_listen                 }, // dev_eclipse
 #endif
         {"Bruteforce",      rf_bruteforce             }, // dev_eclipse
-        {"Jammer",          [=]() { RFJammer(true); } },
+        {"ZAGLUSZACZ",          [=]() { RFJammer(true); } },
 #endif
-        {"Config",          [this]() { configMenu(); }},
+        {"USTAWIENIA",          [this]() { configMenu(); }},
     };
     addOptionToMainMenu();
 
@@ -44,14 +44,14 @@ void RFMenu::optionsMenu() {
 
 void RFMenu::configMenu() {
     options = {
-        {"RF TX Pin", lambdaHelper(gsetRfTxPin, true)},
-        {"RF RX Pin", lambdaHelper(gsetRfRxPin, true)},
-        {"RF Module", setRFModuleMenu},
-        {"RF Frequency", setRFFreqMenu},
+        {"odb i wys", lambdaHelper(gsetRfTxPin, true)},
+        {"odb i wys", lambdaHelper(gsetRfRxPin, true)},
+        {"RF Modul", setRFModuleMenu},
+        {"CZESTOSCLIWOSCI", setRFFreqMenu},
         {"Back", [this]() { optionsMenu(); }},
     };
 
-    loopOptions(options, MENU_TYPE_SUBMENU, "RF Config");
+    loopOptions(options, MENU_TYPE_SUBMENU, "RF konfiguuracja");
 }
 
 void RFMenu::drawIcon(float scale) {
