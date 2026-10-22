@@ -26,29 +26,29 @@ void ConfigMenu::optionsMenu() {
         std::vector<Option> localOptions = {
             {"Display & UI",  [this]() { displayUIMenu(); }},
 #ifdef HAS_RGB_LED
-            {"LED Config",    [this]() { ledMenu(); }      },
+            {"LED USTAWIENIA",    [this]() { ledMenu(); }      },
 #endif
 #if !defined(LITE_VERSION) && (defined(BUZZ_PIN) || defined(HAS_NS4168_SPKR))
-            {"Audio Config",  [this]() { audioMenu(); }    },
+            {"Audio USTAWIENIA",  [this]() { audioMenu(); }    },
 #endif
-            {"System Config", [this]() { systemMenu(); }   },
-            {"Power",         [this]() { powerMenu(); }    },
+            {"System ustawienia", [this]() { systemMenu(); }   },
+            {"ZASILANIE wył",         [this]() { powerMenu(); }    },
         };
 
 #if !defined(LITE_VERSION)
         if (!appStoreInstalled()) {
-            localOptions.push_back({"Install App Store", []() { installAppStoreJS(); }});
+            localOptions.push_back({"instalowanie aplikacji", []() { installAppStoreJS(); }});
         }
 #endif
 
         if (bruceConfig.devMode) {
-            localOptions.push_back({"Dev Mode", [this]() { devMenu(); }});
+            localOptions.push_back({"TRYB PROGRAMISTY", [this]() { devMenu(); }});
         }
 
-        localOptions.push_back({"About", showDeviceInfo});
-        localOptions.push_back({"Main Menu", []() {}});
+        localOptions.push_back({"informacje o urzadeniu", showDeviceInfo});
+        localOptions.push_back({"MeNU GLOWNE", []() {}});
 
-        int selected = loopOptions(localOptions, MENU_TYPE_SUBMENU, "Config");
+        int selected = loopOptions(localOptions, MENU_TYPE_SUBMENU, "ustawienia");
 
         // Exit to Main Menu only if user pressed Back
         if (selected == -1 || selected == localOptions.size() - 1) { return; }
@@ -63,15 +63,15 @@ void ConfigMenu::optionsMenu() {
 void ConfigMenu::displayUIMenu() {
     while (true) {
         std::vector<Option> localOptions = {
-            {"Brightness",  [this]() { setBrightnessMenu(); }               },
-            {"Dim Time",    [this]() { setDimmerTimeMenu(); }               },
-            {"Orientation", [this]() { lambdaHelper(gsetRotation, true)(); }},
-            {"UI Color",    [this]() { setUIColor(); }                      },
-            {"UI Theme",    [this]() { setTheme(); }                        },
-            {"Back",        []() {}                                         },
+            {"JASNOSC",  [this]() { setBrightnessMenu(); }               },
+            {"wygaszacz ekranu",    [this]() { setDimmerTimeMenu(); }               },
+            {"OBRUCi EKRAN", [this]() { lambdaHelper(gsetRotation, true)(); }},
+            {"kolor systemu",    [this]() { setUIColor(); }                      },
+            {"MOTYW",    [this]() { setTheme(); }                        },
+            {"WSTECZ",        []() {}                                         },
         };
 
-        int selected = loopOptions(localOptions, MENU_TYPE_SUBMENU, "Display & UI");
+        int selected = loopOptions(localOptions, MENU_TYPE_SUBMENU, "Ekran iwyglad");
 
         // Exit only if user pressed Back or ESC
         if (selected == -1 || selected == localOptions.size() - 1) { return; }
@@ -108,10 +108,10 @@ void ConfigMenu::ledMenu() {
                  bruceConfig.ledBlinkEnabled = !bruceConfig.ledBlinkEnabled;
                  bruceConfig.saveFile();
              }                                                                            },
-            {"Back",                                                               []() {}},
+            {"WSTECZ",                                                               []() {}},
         };
 
-        int selected = loopOptions(localOptions, MENU_TYPE_SUBMENU, "LED Config");
+        int selected = loopOptions(localOptions, MENU_TYPE_SUBMENU, "LED ustawienia");
 
         // Exit only if user pressed Back or ESC
         if (selected == -1 || selected == localOptions.size() - 1) { return; }
@@ -136,14 +136,14 @@ void ConfigMenu::audioMenu() {
                  bruceConfig.saveFile();
              }                                                                                                                                            },
 #if defined(HAS_NS4168_SPKR)
-            {"Sound Volume",                                                [this]() { setSoundVolume(); }},
+            {"GLOSNOSC",                                                [this]() { setSoundVolume(); }},
 #endif  // BUZZ_PIN || HAS_NS4168_SPKR
 #endif  //  HAS_NS4168_SPKR
 #endif  //  LITE_VERSION
-            {"Back",                                                        []() {}                       },
+            {"WSTECZ",                                                        []() {}                       },
         };
 
-        int selected = loopOptions(localOptions, MENU_TYPE_SUBMENU, "Audio Config");
+        int selected = loopOptions(localOptions, MENU_TYPE_SUBMENU, "ustawienia audio");
 
         // Exit only if user pressed Back or ESC
         if (selected == -1 || selected == localOptions.size() - 1) { return; }
@@ -164,21 +164,21 @@ void ConfigMenu::systemMenu() {
                  bruceConfig.instantBoot = !bruceConfig.instantBoot;
                  bruceConfig.saveFile();
              }                                                                                                           },
-            {String("WiFi Startup: ") + (bruceConfig.wifiAtStartup ? "ON" : "OFF"),
+            {String("wifi przy starcie") + (bruceConfig.wifiAtStartup ? "ON" : "OFF"),
              [this]() {
                  // Toggle WiFi at startup setting
                  bruceConfig.wifiAtStartup = !bruceConfig.wifiAtStartup;
                  bruceConfig.saveFile();
              }                                                                                                           },
-            {"Startup App",                                                         [this]() { setStartupApp(); }        },
-            {"Hide/Show Apps",                                                      [this]() { mainMenu.hideAppsMenu(); }},
-            {"Clock",                                                               [this]() { setClock(); }             },
-            {String("Keyboard Language: ") + bruceConfig.keyboardLang,              [this]() { setKeyboardLanguage(); }  },
-            {"Advanced",                                                            [this]() { advancedMenu(); }         },
-            {"Back",                                                                []() {}                              },
+            {"APLIKACJA STARTOWA",                                                         [this]() { setStartupApp(); }        },
+            {"UKR>POKARZ APK",                                                      [this]() { mainMenu.hideAppsMenu(); }},
+            {"ZEGAREK",                                                               [this]() { setClock(); }             },
+            {String("jezyk klawiatury") + bruceConfig.keyboardLang,              [this]() { setKeyboardLanguage(); }  },
+            {"ZAWANSOWANE",                                                            [this]() { advancedMenu(); }         },
+            {"WSTECZ",                                                                []() {}                              },
         };
 
-        int selected = loopOptions(localOptions, MENU_TYPE_SUBMENU, "System Config");
+        int selected = loopOptions(localOptions, MENU_TYPE_SUBMENU, "USTAWIENIA SYSTEMU");
 
         // Exit only if user pressed Back or ESC
         if (selected == -1 || selected == localOptions.size() - 1) { return; }
@@ -193,18 +193,18 @@ void ConfigMenu::systemMenu() {
 void ConfigMenu::advancedMenu() {
     while (true) {
         std::vector<Option> localOptions = {
-            {"Set Device pins", [this]() { pinsMenu(); }           },
+            {"USTAWIENIA PINOW", [this]() { pinsMenu(); }           },
 #if !defined(LITE_VERSION)
             {"Toggle BLE API",  [this]() { enableBLEAPI(); }       },
             {"BadUSB/BLE",      [this]() { setBadUSBBLEMenu(); }   },
 #endif
-            {"BLE name",
+            {"NAZWA Bt",
              [this]() {
-                 String name = keyboard(bruceConfigPins.bleName, 30, "BLE device name");
+                 String name = keyboard(bruceConfigPins.bleName, 30, "NAZWA URZDZENIA BT");
                  if (name.length() > 0 && name != "\x1B") bruceConfigPins.setBleName(name);
              }                                                     },
-            {"Network Creds",   [this]() { setNetworkCredsMenu(); }},
-            {"Factory Reset",
+            {"DANE SIECI WIFI",   [this]() { setNetworkCredsMenu(); }},
+            {"RESET FABRYCZNY",
              []() {
                  // Confirmation dialog for destructive action
                  drawMainBorder(true);
@@ -240,10 +240,10 @@ void ConfigMenu::advancedMenu() {
 void ConfigMenu::powerMenu() {
     while (true) {
         std::vector<Option> localOptions = {
-            {"Deep Sleep", goToDeepSleep          },
-            {"Sleep",      setSleepMode           },
+            {"GŁEMBOKI SEN ", goToDeepSleep          },
+            {"USPIJ ",      setSleepMode           },
             {"Restart",    []() { ESP.restart(); }},
-            {"Power Off",
+            {"WYLACZ",
              []() {
                  // Confirmation dialog for power off
                  drawMainBorder(true);
@@ -269,13 +269,13 @@ void ConfigMenu::powerMenu() {
 void ConfigMenu::devMenu() {
     while (true) {
         std::vector<Option> localOptions = {
-            {"Serial use USB",  [this]() { switchToUSBSerial(); }          },
-            {"Serial use UART", [this]() { switchToUARTSerial(); }         },
-            {"Disable DevMode", [this]() { bruceConfig.setDevMode(false); }},
-            {"Back",            []() {}                                    },
+            {"PORT SZEREGOWY USB",  [this]() { switchToUSBSerial(); }          },
+            {"PORT SZERGOWU UARD", [this]() { switchToUARTSerial(); }         },
+            {"WYLACZ TRYB PROGRAMISTY", [this]() { bruceConfig.setDevMode(false); }},
+            {"WSTECZ",            []() {}                                    },
         };
 
-        int selected = loopOptions(localOptions, MENU_TYPE_SUBMENU, "Dev Mode");
+        int selected = loopOptions(localOptions, MENU_TYPE_SUBMENU, "TRYB PROGRAMISTY");
 
         // Check if "Disable DevMode" was pressed (second-to-last option)
         if (selected == localOptions.size() - 2) {
@@ -296,18 +296,18 @@ void ConfigMenu::devMenu() {
 void ConfigMenu::pinsMenu() {
     while (true) {
         std::vector<Option> localOptions = {
-            {"I2C Finder",     [this]() { find_i2c_addresses(); }                      },
-            {"CC1101 Pins",    [this]() { setSPIPinsMenu(bruceConfigPins.CC1101_bus); }},
-            {"NRF24  Pins",    [this]() { setSPIPinsMenu(bruceConfigPins.NRF24_bus); } },
+            {"I2C WYSZUKIWARKA",     [this]() { find_i2c_addresses(); }                      },
+            {"CC1101 PINY",    [this]() { setSPIPinsMenu(bruceConfigPins.CC1101_bus); }},
+            {"NRF24 PINY",    [this]() { setSPIPinsMenu(bruceConfigPins.NRF24_bus); } },
 #if !defined(LITE_VERSION)
-            {"LoRa Pins",      [this]() { setSPIPinsMenu(bruceConfigPins.LoRa_bus); }  },
-            {"ST25R3916 Pins", [this]() { setSPIPinsMenu(bruceConfigPins.ST25R_bus); } },
-            {"W5500 Pins",     [this]() { setSPIPinsMenu(bruceConfigPins.W5500_bus); } },
+            {"LoRa PINY",      [this]() { setSPIPinsMenu(bruceConfigPins.LoRa_bus); }  },
+            {"PINY RFID", [this]() { setSPIPinsMenu(bruceConfigPins.ST25R_bus); } },
+            {"INTERNET KABLOWY",     [this]() { setSPIPinsMenu(bruceConfigPins.W5500_bus); } },
 #endif
-            {"SDCard Pins",    [this]() { setSPIPinsMenu(bruceConfigPins.SDCARD_bus); }},
-            {"I2C Pins",       [this]() { setI2CPinsMenu(bruceConfigPins.i2c_bus); }   },
-            {"UART Pins",      [this]() { setUARTPinsMenu(bruceConfigPins.uart_bus); } },
-            {"GPS Pins",       [this]() { setUARTPinsMenu(bruceConfigPins.gps_bus); }  },
+            {"SDCard PINY",    [this]() { setSPIPinsMenu(bruceConfigPins.SDCARD_bus); }},
+            {"I2C PINY",       [this]() { setI2CPinsMenu(bruceConfigPins.i2c_bus); }   },
+            {"UART PINY",      [this]() { setUARTPinsMenu(bruceConfigPins.uart_bus); } },
+            {"GPS PINY",       [this]() { setUARTPinsMenu(bruceConfigPins.gps_bus); }  },
             //{"Serial use USB",  [this]() { switchToUSBSerial(); }                       },
             //{"Serial use UART", [this]() { switchToUARTSerial(); }                      },
             {"Back",           []() {}                                                 },
